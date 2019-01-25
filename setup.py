@@ -38,7 +38,21 @@ else:
 
 module = Extension(
     "pdftotext",
-    sources=["pdftotext.cpp"],
+    sources=[
+        "pdftotext.cpp",
+        "./poppler/cpp/poppler-document.cpp",
+        "./poppler/cpp/poppler-embedded-file.cpp",
+        "./poppler/cpp/poppler-font.cpp",
+        "./poppler/cpp/poppler-global.cpp",
+        "./poppler/cpp/poppler-image.cpp",
+        "./poppler/cpp/poppler-page.cpp",
+        "./poppler/cpp/poppler-page-renderer.cpp",
+        "./poppler/cpp/poppler-page-transition.cpp",
+        "./poppler/cpp/poppler-private.cpp",
+        "./poppler/cpp/poppler-rectangle.cpp",
+        "./poppler/cpp/poppler-toc.cpp",
+        "./poppler/cpp/poppler-version.cpp",
+    ],
     # libraries=["poppler-cpp"],
     include_dirs=include_dirs,
     define_macros=macros,
