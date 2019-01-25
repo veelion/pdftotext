@@ -1,14 +1,11 @@
-image: Visual Studio 2015
+image: Visual Studio 2017
+branches:
+    only:
+        - master
 environment:
-    matrix:
-        - PYTHON: "C:\\Python36"
-          PYTHON_VERSION: "3.6.x" # currently 3.6.5
-          PYTHON_ARCH: "32"
-
-        - PYTHON: "C:\\Python36-x64"
-          PYTHON_VERSION: "3.6.x" # currently 3.6.5
-          PYTHON_ARCH: "64"
-
+    # websockets only works on Python >= 3.5.
+    CIBW_SKIP: cp27-* cp33-* cp34-*
+    
 build_script:
   - pip install cibuildwheel==0.10.0
   - cibuildwheel --output-dir wheelhouse
