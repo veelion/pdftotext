@@ -4,7 +4,7 @@ branches:
         - master
 environment:
     # websockets only works on Python >= 3.5.
-    CIBW_SKIP: cp27-* cp33-* cp34-*
+    CIBW_SKIP: cp27-* cp33-* cp34-* cp35-*
     
 build_script:
   - pip install cibuildwheel==0.10.0
