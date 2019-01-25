@@ -39,7 +39,7 @@ else:
 module = Extension(
     "pdftotext",
     sources=["pdftotext.cpp"],
-    libraries=["poppler-cpp"],
+    # libraries=["poppler-cpp"],
     include_dirs=include_dirs,
     define_macros=macros,
     extra_compile_args=extra_compile_args,
@@ -59,7 +59,7 @@ setup(
     url="https://github.com/jalan/pdftotext",
     license="MIT",
     classifiers=[
-        "Programming Language :: Python :: 2",
+        # "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 3",
     ],
     ext_modules=[module],
