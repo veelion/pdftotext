@@ -1,8 +1,8 @@
 #include <Python.h>
 
-#include <poppler/cpp/poppler-document.h>
-#include <poppler/cpp/poppler-global.h>
-#include <poppler/cpp/poppler-page.h>
+#include "poppler/cpp/poppler-document.h"
+#include "poppler/cpp/poppler-global.h"
+#include "poppler/cpp/poppler-page.h"
 
 #include <algorithm>
 #include <climits>
