@@ -1,7 +1,5 @@
 /*
  * Copyright (C) 2009, Pino Toscano <pino@kde.org>
- * Copyright (C) 2015, Tamas Szekeres <szekerest@gmail.com>
- * Copyright (C) 2018, Adam Reichold <adam.reichold@t-online.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,8 +22,6 @@
 
 #include "FontInfo.h"
 
-#include <algorithm>
-
 using namespace poppler;
 
 class poppler::font_info_private
@@ -43,10 +39,10 @@ public:
         , is_subset(fi->getSubset())
     {
         if (fi->getName()) {
-            font_name = fi->getName()->c_str();
+            font_name = fi->getName()->getCString();
         }
         if (fi->getFile()) {
-            font_file = fi->getFile()->c_str();
+            font_file = fi->getFile()->getCString();
         }
     }
 
@@ -222,7 +218,7 @@ std::vector<font_info> font_iterator::next()
     for (int i = 0; i < items->getLength(); ++i) {
         fonts[i] = font_info(*new font_info_private((FontInfo *)items->get(i)));
     }
-    deleteGooList<FontInfo>(items);
+    deleteGooList(items, FontInfo);
     return fonts;
 }
 

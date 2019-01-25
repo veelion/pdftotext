@@ -1,12 +1,6 @@
 /*
  * Copyright (C) 2009-2010, Pino Toscano <pino@kde.org>
  * Copyright (C) 2010, Hib Eris <hib@hiberis.nl>
- * Copyright (C) 2014, 2015 Hans-Peter Deifel <hpdeifel@gmx.de>
- * Copyright (C) 2015, Tamas Szekeres <szekerest@gmail.com>
- * Copyright (C) 2016 Jakub Alba <jakubalba@gmail.com>
- * Copyright (C) 2018, Albert Astals Cid <aacid@kde.org>
- * Copyright (C) 2018 Suzuki Toshiya <mpsuzuki@hiroshima-u.ac.jp>
- * Copyright (C) 2018, Adam Reichold <adam.reichold@t-online.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,11 +20,6 @@
 #include "poppler-global.h"
 
 #include "poppler-private.h"
-#include "poppler-document-private.h"
-
-#include "DateInfo.h"
-
-#include <algorithm>
 
 #include <cerrno>
 #include <cstring>
@@ -51,8 +40,6 @@ struct MiniIconv
     {}
     ~MiniIconv()
     { if (is_valid()) iconv_close(i_); }
-    MiniIconv(const MiniIconv &) = delete;
-    MiniIconv& operator=(const MiniIconv &) = delete;
     bool is_valid() const
     { return i_ != (iconv_t)-1; }
     operator iconv_t() const
@@ -165,7 +152,7 @@ using namespace poppler;
 /**
  \var poppler::permission_enum poppler::perm_fill_forms
 
- The permission to allow the filling of interactive form fields
+ The permission to allow the the filling of interactive form fields
  (including signature fields).
 
  \note this permission can be set even when the \ref poppler::perm_add_notes "perm_add_notes"
@@ -229,18 +216,14 @@ byte_array ustring::to_utf8() const
         return byte_array();
     }
 
-#ifdef WORDS_BIGENDIAN
-    MiniIconv ic("UTF-8", "UTF-16BE");
-#else
-    MiniIconv ic("UTF-8", "UTF-16LE");
-#endif
+    MiniIconv ic("UTF-8", "UTF-16");
     if (!ic.is_valid()) {
         return byte_array();
     }
     const value_type *me_data = data();
-    byte_array str(size()*sizeof(value_type));
+    byte_array str(size());
     char *str_data = &str[0];
-    size_t me_len_char = size()*sizeof(value_type);
+    size_t me_len_char = size();
     size_t str_len_left = str.size();
     size_t ir = iconv(ic, (ICONV_CONST char **)&me_data, &me_len_char, &str_data, &str_len_left);
     if ((ir == (size_t)-1) && (errno == E2BIG)) {
@@ -281,33 +264,28 @@ ustring ustring::from_utf8(const char *str, int len)
         }
     }
 
-#ifdef WORDS_BIGENDIAN
-    MiniIconv ic("UTF-16BE", "UTF-8");
-#else
-    MiniIconv ic("UTF-16LE", "UTF-8");
-#endif
+    MiniIconv ic("UTF-16", "UTF-8");
     if (!ic.is_valid()) {
         return ustring();
     }
 
-    // +1, because iconv inserts byte order marks
-    ustring ret(len+1, 0);
+    ustring ret(len * 2, 0);
     char *ret_data = reinterpret_cast<char *>(&ret[0]);
     char *str_data = const_cast<char *>(str);
     size_t str_len_char = len;
-    size_t ret_len_left = ret.size() * sizeof(ustring::value_type);
+    size_t ret_len_left = ret.size();
     size_t ir = iconv(ic, (ICONV_CONST char **)&str_data, &str_len_char, &ret_data, &ret_len_left);
     if ((ir == (size_t)-1) && (errno == E2BIG)) {
         const size_t delta = ret_data - reinterpret_cast<char *>(&ret[0]);
-        ret_len_left += ret.size()*sizeof(ustring::value_type);
+        ret_len_left += ret.size();
         ret.resize(ret.size() * 2);
-        ret_data = reinterpret_cast<char *>(&ret[0]) + delta;
+        ret_data = reinterpret_cast<char *>(&ret[delta]);
         ir = iconv(ic, (ICONV_CONST char **)&str_data, &str_len_char, &ret_data, &ret_len_left);
         if (ir == (size_t)-1) {
             return ustring();
         }
     }
-    ret.resize(ret.size() - ret_len_left/sizeof(ustring::value_type));
+    ret.resize(ret.size() - ret_len_left);
 
     return ret;
 }
@@ -332,8 +310,7 @@ ustring ustring::from_latin1(const std::string &str)
  */
 time_type poppler::convert_date(const std::string &date)
 {
-    GooString gooDateStr(date.c_str());
-    return dateStringToTime(&gooDateStr);
+    return detail::convert_date(date.c_str());
 }
 
 std::ostream& poppler::operator<<(std::ostream& stream, const byte_array &array)
@@ -356,48 +333,4 @@ std::ostream& poppler::operator<<(std::ostream& stream, const byte_array &array)
     }
     stream << "]";
     return stream;
-}
-
-/**
- * Sets a custom data directory for initialization of global parameters
- *
- * If no instances of \see document currently exist, this will save the
- * given path as a custom data directory to be used when the first instance
- * of the \see document is constructed.
- *
- * \returns true on success, false on failure
- *
- * \since 0.73.0
- */
-bool poppler::set_data_dir(const std::string &new_data_dir)
-{
-    return initer::set_data_dir(new_data_dir);
-}
-
-/**
- \typedef poppler::debug_func
-
- Debug/error function.
-
- This function type is used for debugging & error output;
- the first parameter is the actual message, the second is the unaltered
- closure argument which was passed to the set_debug_error_function() call.
-
- \since 0.30.0
- */
-
-/**
- Set a new debug/error output function.
-
- If not set, by default error and debug messages will be sent to stderr.
-
- \param debug_function the new debug function
- \param closure user data which will be passed as-is to the debug function
-
- \since 0.30.0
- */
-void poppler::set_debug_error_function(debug_func debug_function, void *closure)
-{
-    poppler::detail::user_debug_function = debug_function;
-    poppler::detail::debug_closure = closure;
 }

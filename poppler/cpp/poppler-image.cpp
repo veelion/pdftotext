@@ -1,10 +1,6 @@
 /*
  * Copyright (C) 2010-2011, Pino Toscano <pino@kde.org>
  * Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
- * Copyright (C) 2017, 2018, Albert Astals Cid <aacid@kde.org>
- * Copyright (C) 2017, Jeroen Ooms <jeroenooms@gmail.com>
- * Copyright (C) 2018, Zsombor Hollay-Horvath <hollay.horvath@gmail.com>
- * Copyright (C) 2018, Adam Reichold <adam.reichold@t-online.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,10 +47,8 @@ struct FileCloser {
         : f(ff) {}
     inline ~FileCloser()
     { (void)close(); }
-    FileCloser(const FileCloser &) = delete;
-    FileCloser& operator=(const FileCloser &) = delete;
     inline bool close()
-    { if (f) { const int c = fclose(f); f = nullptr; return c == 0; } return true; }
+    { if (f) { const int c = fclose(f); f = 0; return c == 0; } return true; }
 
     FILE *f;
 };
@@ -66,11 +60,8 @@ int calc_bytes_per_row(int width, poppler::image::format_enum format)
         return 0;
     case poppler::image::format_mono:
         return (width + 7) >> 3;
-    case poppler::image::format_gray8:
-        return (width + 3) >> 2 << 2;
     case poppler::image::format_rgb24:
-    case poppler::image::format_bgr24:
-        return (width * 3 + 3) >> 2 << 2;
+        return width * 3;
     case poppler::image::format_argb32:
         return width * 4;
     }
@@ -83,9 +74,7 @@ NetPBMWriter::Format pnm_format(poppler::image::format_enum format)
     case poppler::image::format_invalid: // unused, anyway
     case poppler::image::format_mono:
         return NetPBMWriter::MONOCHROME;
-    case poppler::image::format_gray8:
     case poppler::image::format_rgb24:
-    case poppler::image::format_bgr24:
     case poppler::image::format_argb32:
         return NetPBMWriter::RGB;
     }
@@ -98,7 +87,7 @@ using namespace poppler;
 
 image_private::image_private(int iwidth, int iheight, image::format_enum iformat)
     : ref(1)
-    , data(nullptr)
+    , data(0)
     , width(iwidth)
     , height(iheight)
     , bytes_per_row(0)
@@ -118,19 +107,19 @@ image_private::~image_private()
 image_private *image_private::create_data(int width, int height, image::format_enum format)
 {
     if (width <= 0 || height <= 0) {
-        return nullptr;
+        return 0;
     }
 
     int bpr = calc_bytes_per_row(width, format);
     if (bpr <= 0) {
-        return nullptr;
+        return 0;
     }
 
-    auto d = std::make_unique<image_private>(width, height, format);
+    std::auto_ptr<image_private> d(new image_private(width, height, format));
     d->bytes_num = bpr * height;
     d->data = reinterpret_cast<char *>(std::malloc(d->bytes_num));
     if (!d->data) {
-        return nullptr;
+        return 0;
     }
     d->own_data = true;
     d->bytes_per_row = bpr;
@@ -141,21 +130,21 @@ image_private *image_private::create_data(int width, int height, image::format_e
 image_private *image_private::create_data(char *data, int width, int height, image::format_enum format)
 {
     if (width <= 0 || height <= 0 || !data) {
-        return nullptr;
+        return 0;
     }
 
     int bpr = calc_bytes_per_row(width, format);
     if (bpr <= 0) {
-        return nullptr;
+        return 0;
     }
 
-    image_private *d = new image_private(width, height, format);
+    std::auto_ptr<image_private> d(new image_private(width, height, format));
     d->bytes_num = bpr * height;
     d->data = data;
     d->own_data = false;
     d->bytes_per_row = bpr;
 
-    return d;
+    return d.release();
 }
 
 /**
@@ -175,8 +164,6 @@ image_private *image_private::create_data(char *data, int width, int height, ima
  \enum poppler::image::format_enum
 
  The possible formats for an image.
-
- format_gray8 and format_bgr24 were introduced in poppler 0.65.
 */
 
 
@@ -184,7 +171,7 @@ image_private *image_private::create_data(char *data, int width, int height, ima
  Construct an invalid image.
  */
 image::image()
-    : d(nullptr)
+    : d(0)
 {
 }
 
@@ -292,7 +279,7 @@ int image::bytes_per_row() const
 char *image::data()
 {
     if (!d) {
-        return nullptr;
+        return 0;
     }
 
     detach();
@@ -308,7 +295,7 @@ char *image::data()
  */
 const char *image::const_data() const
 {
-    return d ? d->data : nullptr;
+    return d ? d->data : 0;
 }
 
 /**
@@ -358,7 +345,7 @@ bool image::save(const std::string &file_name, const std::string &out_format, in
     std::string fmt = out_format;
     std::transform(fmt.begin(), fmt.end(), fmt.begin(), tolower);
 
-    std::unique_ptr<ImgWriter> w;
+    std::auto_ptr<ImgWriter> w;
     const int actual_dpi = dpi == -1 ? 75 : dpi;
     if (false) {
     }
@@ -383,7 +370,7 @@ bool image::save(const std::string &file_name, const std::string &out_format, in
     if (!w.get()) {
         return false;
     }
-    FILE *f = fopen(file_name.c_str(), "wb");
+    FILE *f = fopen(file_name.c_str(), "w");
     if (!f) {
         return false;
     }
@@ -396,42 +383,6 @@ bool image::save(const std::string &file_name, const std::string &out_format, in
         return false;
     case format_mono:
         return false;
-    case format_gray8: {
-        std::vector<unsigned char> row(3 * d->width);
-        char *hptr = d->data;
-        for (int y = 0; y < d->height; ++y) {
-            unsigned char *rowptr = &row[0];
-            for (int x = 0; x < d->width; ++x, rowptr += 3) {
-                rowptr[0] = *reinterpret_cast<unsigned char *>(hptr + x);
-                rowptr[1] = *reinterpret_cast<unsigned char *>(hptr + x);
-                rowptr[2] = *reinterpret_cast<unsigned char *>(hptr + x);
-            }
-            rowptr = &row[0];
-            if (!w->writeRow(&rowptr)) {
-                return false;
-            }
-            hptr += d->bytes_per_row;
-        }
-        break;
-    }
-    case format_bgr24: {
-        std::vector<unsigned char> row(3 * d->width);
-        char *hptr = d->data;
-        for (int y = 0; y < d->height; ++y) {
-            unsigned char *rowptr = &row[0];
-            for (int x = 0; x < d->width; ++x, rowptr += 3) {
-                rowptr[0] = *reinterpret_cast<unsigned char *>(hptr + x * 3 + 2);
-                rowptr[1] = *reinterpret_cast<unsigned char *>(hptr + x * 3 + 1);
-                rowptr[2] = *reinterpret_cast<unsigned char *>(hptr + x * 3);
-            }
-            rowptr = &row[0];
-            if (!w->writeRow(&rowptr)) {
-                return false;
-            }
-            hptr += d->bytes_per_row;
-        }
-        break;
-    }
     case format_rgb24: {
         char *hptr = d->data;
         for (int y = 0; y < d->height; ++y) {

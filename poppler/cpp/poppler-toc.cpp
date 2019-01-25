@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2009-2010, Pino Toscano <pino@kde.org>
- * Copyright (C) 2018, Albert Astals Cid <aacid@kde.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,12 +37,12 @@ toc_private::~toc_private()
 toc* toc_private::load_from_outline(Outline *outline)
 {
     if (!outline) {
-        return nullptr;
+        return 0;
     }
 
-    const GooList *items = outline->getItems();
+    GooList *items = outline->getItems();
     if (!items || items->getLength() < 1) {
-        return nullptr;
+        return 0;
     }
 
     toc *newtoc = new toc();
@@ -63,7 +62,7 @@ toc_item_private::~toc_item_private()
     delete_all(children);
 }
 
-void toc_item_private::load(const OutlineItem *item)
+void toc_item_private::load(OutlineItem *item)
 {
     const Unicode *title_unicode = item->getTitle();
     const int title_length = item->getTitleLength();
@@ -71,7 +70,7 @@ void toc_item_private::load(const OutlineItem *item)
     is_open = item->isOpen();
 }
 
-void toc_item_private::load_children(const GooList *items)
+void toc_item_private::load_children(GooList *items)
 {
     const int num_items = items->getLength();
     children.resize(num_items);
@@ -83,7 +82,7 @@ void toc_item_private::load_children(const GooList *items)
         children[i] = new_item;
 
         item->open();
-        const GooList *item_children = item->getKids();
+        GooList *item_children = item->getKids();
         if (item_children) {
             new_item->d->load_children(item_children);
         }
@@ -117,7 +116,7 @@ toc::~toc()
 
  This item is special, it has no title nor actions, it is open and its children
  are the effective root items of the TOC. This is provided as a convenience
- when iterating through the TOC.
+ when iterating throught the TOC.
 
  \returns the root "item"
  */

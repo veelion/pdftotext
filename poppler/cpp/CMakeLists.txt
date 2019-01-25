@@ -1,7 +1,6 @@
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_BINARY_DIR}
-  ${ICONV_INCLUDE_DIR}
 )
 
 configure_file(poppler-version.h.in ${CMAKE_CURRENT_BINARY_DIR}/poppler-version.h @ONLY)
@@ -23,14 +22,14 @@ set(poppler_cpp_SRCS
   poppler-version.cpp
 )
 
-add_library(poppler-cpp ${poppler_cpp_SRCS})
-set_target_properties(poppler-cpp PROPERTIES VERSION 0.6.0 SOVERSION 0)
-if(MINGW AND BUILD_SHARED_LIBS)
-    get_target_property(POPPLER_CPP_SOVERSION poppler-cpp SOVERSION)
-    set_target_properties(poppler-cpp PROPERTIES SUFFIX "-${POPPLER_CPP_SOVERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}")
-endif()
+add_library(poppler-cpp SHARED ${poppler_cpp_SRCS})
+set_target_properties(poppler-cpp PROPERTIES VERSION 0.2.0 SOVERSION 0)
 target_link_libraries(poppler-cpp poppler ${ICONV_LIBRARIES})
-install(TARGETS poppler-cpp RUNTIME DESTINATION bin LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+if(MSVC)
+target_link_libraries(poppler-cpp ${poppler_LIBS})
+endif(MSVC)
+target_link_libraries(poppler-cpp LINK_INTERFACE_LIBRARIES "")
+install(TARGETS poppler-cpp RUNTIME DESTINATION bin LIBRARY DESTINATION lib${LIB_SUFFIX} ARCHIVE DESTINATION lib${LIB_SUFFIX})
 
 install(FILES
   poppler-document.h

@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2009, Pino Toscano <pino@kde.org>
- * Copyright (C) 2018, Albert Astals Cid <aacid@kde.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,11 +49,8 @@ public:
     toc_item_private();
     ~toc_item_private();
 
-    toc_item_private(const toc_item_private &) = delete;
-    toc_item_private& operator=(const toc_item_private &) = delete;
-
-    void load(const OutlineItem *item);
-    void load_children(const GooList *items);
+    void load(OutlineItem *item);
+    void load_children(GooList *items);
 
     std::vector<toc_item*> children;
     ustring title;

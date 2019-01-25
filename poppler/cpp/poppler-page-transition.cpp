@@ -45,7 +45,7 @@ public:
 /**
  \enum poppler::page_transition::type_enum
 
- The possible types of a %page transition.
+ The possibe types of a %page transition.
 */
 
 /**
